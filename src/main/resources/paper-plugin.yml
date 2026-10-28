@@ -1,0 +1,13 @@
+name: ExpToBottles
+version: '1.0.0'
+main: de.niktr.purpur.exptobottles.ExpToBottlesPlugin
+api-version: '1.21'
+author: niktr
+description: Purpur Plugin to store XP in bottles
+permissions:
+  exptobottles.use:
+    description: Erlaubt das Abfüllen und Einlösen von XP in Flaschen
+    default: true
+  exptobottles.admin:
+    description: Erlaubt administrative Befehle wie /bottle reload
+    default: op

@@ -1,0 +1,104 @@
+# ========================================================
+# ExpToBottles - Konfiguration für Purpur / Paper MC 1.26.2
+# ========================================================
+
+bottling:
+  # Benötigt der Spieler eine leere Glasflasche im Inventar oder in der Hand?
+  require-empty-bottle: true
+
+  # Bekommt der Spieler beim Trinken/Einlösen der Flasche eine leere Glasflasche zurück?
+  return-empty-bottle-on-consume: true
+
+  # Mindestanzahl an XP-Punkten, die in eine Flasche abgefüllt werden müssen
+  min-xp: 1
+
+  # Maximale Anzahl an XP pro Flasche (-1 für unbegrenzt)
+  max-xp-per-bottle: -1
+
+  # Steuer/Gebühr in Prozent (z. B. 5.0 für 5% XP-Verlust beim Abfüllen, 0.0 für keine Steuer)
+  tax-percent: 0.0
+
+  # Erlaube Spielern, mit einer leeren Glasflasche in der Hand zu sneaken und rechtszuklicken, um XP abzufüllen
+  sneak-right-click-to-fill: true
+
+  # Was soll beim Sneak-Rechtsklick abgefüllt werden?
+  # "LEVEL" = 1 Level
+  # "ALL" = Alle verfügbaren XP
+  # Oder eine feste Zahl wie "100"
+  sneak-fill-mode: "LEVEL"
+
+  # Direkte XP-Aufnahme per Rechtsklick mit der Erfahrungsflasche (ohne Werfen)
+  direct-consume-on-right-click: true
+
+  # Werfen der Flasche erlaubt (lässt beim Aufprall die exakte XP-Menge fallen)
+  allow-throw: true
+
+# ========================================================
+# Schnelles XP-Einsammeln (Fast XP Vacuum für Farmen)
+# Löst das Problem, dass man ewig in Farmen vor XP-Klumpen steht!
+# ========================================================
+fast-pickup:
+  # Schnelles Einsammeln aktivieren?
+  enabled: true
+
+  # Radius in Blöcken, aus dem XP-Orbs herangezogen werden
+  vacuum-radius: 5.0
+
+  # Distanz in Blöcken, ab der XP-Orbs sofort absorbiert werden
+  instant-pickup-radius: 2.5
+
+  # Intervall in Ticks (2 Ticks = 10 Mal pro Sekunde = so gut wie instant)
+  interval-ticks: 2
+
+  # Maximale Anzahl an Orbs, die pro Durchlauf absorbiert werden (Schutz vor Lag-Spitzen)
+  max-orbs-per-batch: 50
+
+  # Zieht weiter entfernte Orbs sanft zum Spieler hin
+  pull-effect: true
+
+  # Zuerst beschädigte Gegenstände mit Reparatur (Mending) reparieren (wie in Vanilla)
+  repair-mending: true
+
+  # Sound-Effekt beim Aufnehmen abspielen (einmal pro Batch, um Ohrenschmerzen zu vermeiden)
+  play-sound: true
+
+  # Kleine Partikel beim Einsaugen anzeigen
+  particles: true
+
+effects:
+  # Sound-Effekte aktivieren
+  enabled: true
+  sound-fill: "ITEM_BOTTLE_FILL"
+  sound-consume: "ENTITY_PLAYER_LEVELUP"
+  particles: true
+
+item:
+  # Name der generierten Erfahrungsflasche (unterstützt MiniMessage Farben und Gradients)
+  name: "<gradient:#00FFAA:#00AAFF><bold>Erfahrungsflasche</bold></gradient>"
+
+  # Beschreibung / Lore der Flasche
+  # Platzhalter: {xp}, {levels}, {player}
+  lore:
+    - "<gray>Gespeicherte XP: <green><bold>{xp}</bold></green> <dark_gray>(ca. {levels} Level)</dark_gray>"
+    - "<gray>Abgefüllt von: <yellow>{player}</yellow>"
+    - "<dark_gray>---------------------------</dark_gray>"
+    - "<yellow>Rechtsklick:</yellow> <white>XP direkt trinken</white>"
+    - "<yellow>Werfen:</yellow> <white>XP Flasche werfen</white>"
+
+messages:
+  # Prefix vor allen Plugin-Nachrichten
+  prefix: "<dark_gray>[<gradient:#00FFAA:#00AAFF>ExpBottles</gradient>]</dark_gray> "
+
+  not-enough-xp: "<red>Du hast nicht genug Erfahrung! Du besitzt nur <yellow>{xp}</yellow> XP.</red>"
+  no-bottle: "<red>Du benötigst eine leere Glasflasche in der Hand oder im Inventar!</red>"
+  bottled-success: "<green>Erfolgreich <gold>{xp} XP</gold> in eine Flasche abgefüllt!</green>"
+  bottled-success-tax: "<green>Erfolgreich <gold>{xp} XP</gold> abgefüllt! <gray>(Steuer: {tax} XP)</gray></green>"
+  consumed-success: "<green>Du hast <gold>{xp} XP</gold> erhalten!</green>"
+  min-xp-error: "<red>Die Mindestmenge zum Abfüllen beträgt <yellow>{min}</yellow> XP.</red>"
+  max-xp-error: "<red>Die Höchstmenge pro Flasche beträgt <yellow>{max}</yellow> XP.</red>"
+  no-permission: "<red>Dazu hast du keine Berechtigung!</red>"
+  reloaded: "<green>Konfiguration wurde erfolgreich neu geladen!</green>"
+  usage: "<yellow>Verwendung: <white>/bottle [amount | all | Xl | until Y | vacuum | spawn X]</white></yellow>"
+  xp-spawned: "<green>Es wurden <gold>{xp} XP</gold> am Standort gespawnt!</green>"
+  vacuum-enabled: "<green>XP-Schnelleinsammler wurde <yellow>aktiviert</yellow>!</green>"
+  vacuum-disabled: "<red>XP-Schnelleinsammler wurde <yellow>deaktiviert</yellow>!</red>"
