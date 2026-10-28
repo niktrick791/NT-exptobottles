@@ -1,6 +1,5 @@
 # NT-exptobottles ⚗️ - Minecraft Plugin
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C.svg?logo=paypal&logoColor=white)](https://paypal.me/niktrick)
-[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B.svg?logo=kofi&logoColor=white)](https://ko-fi.com/niktrick)
 
 [🇬🇧 Switch to English Version](README.md) | [🇩🇪 Deutsche Version](README_DE.md)
 
@@ -93,5 +92,4 @@ Die fertige JAR befindet sich im Projektordner:
 
 Wenn dir dieses Plugin gefällt, freuen wir uns über deine freiwillige Unterstützung:
 - [PayPal Spende](https://paypal.me/niktrick)
-- [Ko-fi Support](https://ko-fi.com/niktrick)
 - Alle Spenden sind freiwillig und fließen direkt in die Wartung und Weiterentwicklung!
