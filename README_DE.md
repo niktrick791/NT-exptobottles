@@ -1,4 +1,4 @@
-# ExpToBottles ⚗️ - Minecraft Plugin
+# NT-exptobottles ⚗️ - Minecraft Plugin
 
 [🇬🇧 Switch to English Version](README.md) | [🇩🇪 Deutsche Version](README_DE.md)
 

@@ -1,7 +1,8 @@
-name: ExpToBottles
+name: NT-exptobottles
 version: '1.0.0'
 main: de.niktr.purpur.exptobottles.ExpToBottlesPlugin
 author: niktr
+website: https://github.com/niktrick791/NT-exptobottles
 description: Store and redeem XP in bottles across Minecraft 1.8 through 1.21.4+
 commands:
   bottle:
