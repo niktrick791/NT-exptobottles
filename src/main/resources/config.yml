@@ -1,6 +1,10 @@
 # ========================================================
-# ExpToBottles - Konfiguration für Purpur / Paper MC 1.26.2
+# ExpToBottles - Configuration (1.8.8 - 1.21.4+)
 # ========================================================
+
+# Language: "en" (English) or "de" (German)
+# Can also be changed in-game via /bottle lang <en|de>
+language: en
 
 bottling:
   # Benötigt der Spieler eine leere Glasflasche im Inventar oder in der Hand?

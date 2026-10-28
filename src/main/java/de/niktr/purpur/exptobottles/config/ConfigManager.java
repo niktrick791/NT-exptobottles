@@ -6,10 +6,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ConfigManager {
 
     private final JavaPlugin plugin;
+
+    // Language
+    private String language = "en";
 
     // Bottling settings
     private boolean requireEmptyBottle;
@@ -58,6 +62,7 @@ public class ConfigManager {
     private String xpSpawned;
     private String vacuumEnabled;
     private String vacuumDisabled;
+    private String langChanged;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -68,6 +73,12 @@ public class ConfigManager {
         plugin.saveDefaultConfig();
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
+
+        this.language = config.getString("language", "en").toLowerCase(Locale.ROOT);
+        if (!"de".equals(language) && !"en".equals(language)) {
+            this.language = "en";
+        }
+        boolean isDe = "de".equals(language);
 
         this.requireEmptyBottle = config.getBoolean("bottling.require-empty-bottle", true);
         this.returnEmptyBottleOnConsume = config.getBoolean("bottling.return-empty-bottle-on-consume", true);
@@ -94,13 +105,21 @@ public class ConfigManager {
         this.soundConsume = config.getString("effects.sound-consume", "ENTITY_PLAYER_LEVELUP");
         this.particlesEnabled = config.getBoolean("effects.particles", true);
 
-        this.itemName = convertTags(config.getString("item.name", "&aErfahrungsflasche &7(&e{xp} XP&7)"));
+        String defItemName = isDe ? "&aErfahrungsflasche &7(&e{xp} XP&7)" : "&aExperience Bottle &7(&e{xp} XP&7)";
+        this.itemName = convertTags(config.getString("item.name", defItemName));
+
         List<String> rawLore = config.getStringList("item.lore");
-        this.itemLore = new ArrayList<>();
+        this.itemLore = new ArrayList<String>();
         if (rawLore.isEmpty()) {
-            this.itemLore.add("&7Gespeicherte Erfahrung: &e{xp} XP");
-            this.itemLore.add("&7Ungefähre Level: &b~{levels} Level");
-            this.itemLore.add("&7Abgefüllt von: &f{player}");
+            if (isDe) {
+                this.itemLore.add("&7Gespeicherte Erfahrung: &e{xp} XP");
+                this.itemLore.add("&7Ungefähre Level: &b~{levels} Level");
+                this.itemLore.add("&7Abgefüllt von: &f{player}");
+            } else {
+                this.itemLore.add("&7Stored Experience: &e{xp} XP");
+                this.itemLore.add("&7Estimated Levels: &b~{levels} Levels");
+                this.itemLore.add("&7Bottled by: &f{player}");
+            }
             this.itemLore.add("&8[XP:{xp}]");
         } else {
             for (String l : rawLore) {
@@ -110,19 +129,60 @@ public class ConfigManager {
         }
 
         this.prefix = convertTags(config.getString("messages.prefix", "&8[&aXP-Bottles&8] &r"));
-        this.notEnoughXp = convertTags(config.getString("messages.not-enough-xp", "&cDu hast nicht genug Erfahrung! (Du hast nur &e{xp} XP&c)"));
-        this.noBottle = convertTags(config.getString("messages.no-bottle", "&cDu benötigst eine leere Glasflasche in der Hand!"));
-        this.bottledSuccess = convertTags(config.getString("messages.bottled-success", "&aDu hast erfolgreich &e{xp} XP &ain eine Flasche gefüllt!"));
-        this.bottledSuccessTax = convertTags(config.getString("messages.bottled-success-tax", "&aErfolgreich &e{xp} XP &aabgefüllt (&c{tax} XP &7Steuer abgezogen)."));
-        this.consumedSuccess = convertTags(config.getString("messages.consumed-success", "&aDu hast &e{xp} XP &aerhalten!"));
-        this.minXpError = convertTags(config.getString("messages.min-xp-error", "&cDie Mindestmenge zum Abfüllen beträgt &e{min} XP&c."));
-        this.maxXpError = convertTags(config.getString("messages.max-xp-error", "&cDie Höchstmenge pro Flasche beträgt &e{max} XP&c."));
-        this.noPermission = convertTags(config.getString("messages.no-permission", "&cDazu hast du keine Berechtigung!"));
-        this.reloaded = convertTags(config.getString("messages.reloaded", "&aKonfiguration wurde erfolgreich neu geladen!"));
-        this.usage = convertTags(config.getString("messages.usage", "&eVerwendung: &f/bottle [amount | all | Xl | until Y | vacuum | spawn X]"));
-        this.xpSpawned = convertTags(config.getString("messages.xp-spawned", "&aEs wurden &e{xp} XP &aam Standort gespawnt!"));
-        this.vacuumEnabled = convertTags(config.getString("messages.vacuum-enabled", "&aXP-Schnelleinsammler wurde &eaktiviert&a!"));
-        this.vacuumDisabled = convertTags(config.getString("messages.vacuum-disabled", "&cXP-Schnelleinsammler wurde &edeaktiviert&c!"));
+        this.notEnoughXp = convertTags(config.getString("messages.not-enough-xp", isDe
+                ? "&cDu hast nicht genug Erfahrung! (Du hast nur &e{xp} XP&c)"
+                : "&cYou do not have enough experience! (You only have &e{xp} XP&c)"));
+        this.noBottle = convertTags(config.getString("messages.no-bottle", isDe
+                ? "&cDu benötigst eine leere Glasflasche in der Hand!"
+                : "&cYou need an empty glass bottle in your hand!"));
+        this.bottledSuccess = convertTags(config.getString("messages.bottled-success", isDe
+                ? "&aDu hast erfolgreich &e{xp} XP &ain eine Flasche gefüllt!"
+                : "&aSuccessfully bottled &e{xp} XP &ainto a bottle!"));
+        this.bottledSuccessTax = convertTags(config.getString("messages.bottled-success-tax", isDe
+                ? "&aErfolgreich &e{xp} XP &aabgefüllt (&c{tax} XP &7Steuer abgezogen)."
+                : "&aSuccessfully bottled &e{xp} XP &a(&c{tax} XP &7tax deducted)."));
+        this.consumedSuccess = convertTags(config.getString("messages.consumed-success", isDe
+                ? "&aDu hast &e{xp} XP &aerhalten!"
+                : "&aYou received &e{xp} XP&a!"));
+        this.minXpError = convertTags(config.getString("messages.min-xp-error", isDe
+                ? "&cDie Mindestmenge zum Abfüllen beträgt &e{min} XP&c."
+                : "&cThe minimum amount to bottle is &e{min} XP&c."));
+        this.maxXpError = convertTags(config.getString("messages.max-xp-error", isDe
+                ? "&cDie Höchstmenge pro Flasche beträgt &e{max} XP&c."
+                : "&cThe maximum amount per bottle is &e{max} XP&c."));
+        this.noPermission = convertTags(config.getString("messages.no-permission", isDe
+                ? "&cDazu hast du keine Berechtigung!"
+                : "&cYou do not have permission for this!"));
+        this.reloaded = convertTags(config.getString("messages.reloaded", isDe
+                ? "&aKonfiguration wurde erfolgreich neu geladen!"
+                : "&aConfiguration was successfully reloaded!"));
+        this.usage = convertTags(config.getString("messages.usage", isDe
+                ? "&eVerwendung: &f/bottle [amount | all | Xl | until Y | vacuum | spawn X | lang <de|en>]"
+                : "&eUsage: &f/bottle [amount | all | Xl | until Y | vacuum | spawn X | lang <de|en>]"));
+        this.xpSpawned = convertTags(config.getString("messages.xp-spawned", isDe
+                ? "&aEs wurden &e{xp} XP &aam Standort gespawnt!"
+                : "&aSpawned &e{xp} XP &aat your location!"));
+        this.vacuumEnabled = convertTags(config.getString("messages.vacuum-enabled", isDe
+                ? "&aXP-Schnelleinsammler wurde &eaktiviert&a!"
+                : "&aXP vacuum collector has been &aenabled&a!"));
+        this.vacuumDisabled = convertTags(config.getString("messages.vacuum-disabled", isDe
+                ? "&cXP-Schnelleinsammler wurde &edeaktiviert&c!"
+                : "&cXP vacuum collector has been &cdisabled&c!"));
+        this.langChanged = convertTags(config.getString("messages.lang-changed", isDe
+                ? "&aSprache erfolgreich auf &eDeutsch &ageändert!"
+                : "&aLanguage successfully set to &eEnglish&a!"));
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String lang) {
+        String clean = (lang != null && lang.equalsIgnoreCase("de")) ? "de" : "en";
+        this.language = clean;
+        plugin.getConfig().set("language", clean);
+        plugin.saveConfig();
+        loadConfig();
     }
 
     private String convertTags(String text) {
@@ -196,4 +256,5 @@ public class ConfigManager {
     public String getXpSpawned() { return xpSpawned; }
     public String getVacuumEnabled() { return vacuumEnabled; }
     public String getVacuumDisabled() { return vacuumDisabled; }
+    public String getLangChanged() { return langChanged; }
 }

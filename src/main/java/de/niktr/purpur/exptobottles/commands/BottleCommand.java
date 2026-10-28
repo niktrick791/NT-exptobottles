@@ -44,6 +44,29 @@ public class BottleCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // Admin language command
+        if (args.length > 0 && (args[0].equalsIgnoreCase("lang") || args[0].equalsIgnoreCase("language"))) {
+            if (!sender.hasPermission("exptobottles.admin")) {
+                sender.sendMessage(config.getPrefixedMessage(config.getNoPermission()));
+                return true;
+            }
+            if (args.length < 2) {
+                boolean isDe = "de".equalsIgnoreCase(config.getLanguage());
+                sender.sendMessage(config.getPrefixedMessage(isDe
+                        ? "&eAktuelle Sprache: &bDeutsch&e. Nutze &b/bottle lang <de|en>&e."
+                        : "&eCurrent language: &bEnglish&e. Use &b/bottle lang <de|en>&e."));
+                return true;
+            }
+            String target = args[1].toLowerCase(Locale.ROOT);
+            if (!target.equals("de") && !target.equals("en")) {
+                sender.sendMessage(config.getPrefixedMessage("&cInvalid language / Ungültige Sprache: &e" + target + " &7(de / en)"));
+                return true;
+            }
+            config.setLanguage(target);
+            sender.sendMessage(config.getPrefixedMessage(config.getLangChanged()));
+            return true;
+        }
+
         // Must be player for all other commands
         if (!(sender instanceof Player)) {
             sender.sendMessage("§cDieser Befehl kann nur von Spielern ausgeführt werden.");
@@ -171,6 +194,8 @@ public class BottleCommand implements CommandExecutor, TabCompleter {
 
             if (sender.hasPermission("exptobottles.admin")) {
                 options.add("reload");
+                options.add("lang");
+                options.add("language");
                 options.add("spawn");
                 options.add("generate");
             }
@@ -178,6 +203,16 @@ public class BottleCommand implements CommandExecutor, TabCompleter {
             for (String opt : options) {
                 if (opt.toLowerCase(Locale.ROOT).startsWith(input)) {
                     completions.add(opt);
+                }
+            }
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("lang") || args[0].equalsIgnoreCase("language"))) {
+            if (sender.hasPermission("exptobottles.admin")) {
+                String input = args[1].toLowerCase(Locale.ROOT);
+                List<String> langs = Arrays.asList("de", "en");
+                for (String l : langs) {
+                    if (l.startsWith(input)) {
+                        completions.add(l);
+                    }
                 }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("until")) {
