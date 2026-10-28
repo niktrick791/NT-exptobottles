@@ -2,15 +2,12 @@ package de.niktr.purpur.exptobottles.bottle;
 
 import de.niktr.purpur.exptobottles.config.ConfigManager;
 import de.niktr.purpur.exptobottles.experience.ExperienceManager;
-import net.kyori.adventure.text.Component;
+import de.niktr.purpur.exptobottles.experience.XVersion;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -21,14 +18,20 @@ public class BottleManager {
 
     private final JavaPlugin plugin;
     private final ConfigManager config;
-    private final NamespacedKey xpKey;
-    private final NamespacedKey ownerKey;
+    private NamespacedKey xpKey;
+    private NamespacedKey ownerKey;
 
     public BottleManager(JavaPlugin plugin, ConfigManager config) {
         this.plugin = plugin;
         this.config = config;
-        this.xpKey = new NamespacedKey(plugin, "stored_xp");
-        this.ownerKey = new NamespacedKey(plugin, "bottle_owner");
+        try {
+            this.xpKey = new NamespacedKey(plugin, "stored_xp");
+            this.ownerKey = new NamespacedKey(plugin, "bottle_owner");
+        } catch (Throwable ignored) {
+            // Pre-1.13 servers without NamespacedKey
+            this.xpKey = null;
+            this.ownerKey = null;
+        }
     }
 
     public NamespacedKey getXpKey() {
@@ -43,48 +46,40 @@ public class BottleManager {
      * Checks if an ItemStack is an experience bottle created by this plugin.
      */
     public boolean isExpBottle(ItemStack item) {
-        if (item == null || item.getType() != Material.EXPERIENCE_BOTTLE || !item.hasItemMeta()) {
+        if (item == null || !XVersion.isExpBottleMaterial(item.getType()) || !item.hasItemMeta()) {
             return false;
         }
-        ItemMeta meta = item.getItemMeta();
-        return meta.getPersistentDataContainer().has(xpKey, PersistentDataType.INTEGER);
+        return getStoredExp(item) > 0;
     }
 
     /**
      * Retrieves the stored experience amount from an ItemStack.
      */
     public int getStoredExp(ItemStack item) {
-        if (!isExpBottle(item)) return 0;
-        ItemMeta meta = item.getItemMeta();
-        Integer xp = meta.getPersistentDataContainer().get(xpKey, PersistentDataType.INTEGER);
-        return xp != null ? xp : 0;
+        return XVersion.readXp(item, xpKey);
     }
 
     /**
      * Creates a custom experience bottle containing the specified amount of XP.
      */
     public ItemStack createExpBottle(int xp, String ownerName) {
-        ItemStack item = new ItemStack(Material.EXPERIENCE_BOTTLE, 1);
+        ItemStack item = new ItemStack(XVersion.getExpBottleMaterial(), 1);
         ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item;
 
-        // Store PDC data
-        PersistentDataContainer pdc = meta.getPersistentDataContainer();
-        pdc.set(xpKey, PersistentDataType.INTEGER, xp);
-        if (ownerName != null) {
-            pdc.set(ownerKey, PersistentDataType.STRING, ownerName);
-        }
+        XVersion.storeXp(meta, xpKey, xp, ownerName);
 
         int approxLevels = ExperienceManager.getLevelFromExp(xp);
 
         // Display Name
-        meta.displayName(config.parse(config.getItemName(), "xp", xp, "levels", approxLevels, "player", ownerName != null ? ownerName : "Unbekannt"));
+        meta.setDisplayName(config.parse(config.getItemName(), "xp", xp, "levels", approxLevels, "player", ownerName != null ? ownerName : "Unbekannt"));
 
         // Lore
-        List<Component> loreList = new ArrayList<>();
+        List<String> loreList = new ArrayList<>();
         for (String line : config.getItemLore()) {
             loreList.add(config.parse(line, "xp", xp, "levels", approxLevels, "player", ownerName != null ? ownerName : "Unbekannt"));
         }
-        meta.lore(loreList);
+        meta.setLore(loreList);
 
         item.setItemMeta(meta);
         return item;
@@ -92,10 +87,6 @@ public class BottleManager {
 
     /**
      * Attempts to bottle XP from a player into a bottle.
-     *
-     * @param player player to bottle XP from
-     * @param requestedXp XP points requested to bottle
-     * @return true if bottling was successful, false otherwise
      */
     public boolean bottleExp(Player player, int requestedXp) {
         int playerTotalExp = ExperienceManager.getPlayerTotalExp(player);
@@ -160,9 +151,12 @@ public class BottleManager {
      * Checks if player has at least one glass bottle in hand or inventory.
      */
     public boolean hasGlassBottle(Player player) {
-        // First check hands
-        if (player.getInventory().getItemInMainHand().getType() == Material.GLASS_BOTTLE) return true;
-        if (player.getInventory().getItemInOffHand().getType() == Material.GLASS_BOTTLE) return true;
+        ItemStack inHand = XVersion.getItemInHand(player);
+        if (inHand != null && inHand.getType() == Material.GLASS_BOTTLE) return true;
+        try {
+            ItemStack off = player.getInventory().getItemInOffHand();
+            if (off != null && off.getType() == Material.GLASS_BOTTLE) return true;
+        } catch (Throwable ignored) {}
         return player.getInventory().contains(Material.GLASS_BOTTLE);
     }
 
@@ -170,36 +164,40 @@ public class BottleManager {
      * Removes one glass bottle from player (hand preferred, then inventory).
      */
     public void removeGlassBottle(Player player) {
-        ItemStack main = player.getInventory().getItemInMainHand();
-        if (main.getType() == Material.GLASS_BOTTLE) {
-            main.setAmount(main.getAmount() - 1);
+        ItemStack inHand = XVersion.getItemInHand(player);
+        if (inHand != null && inHand.getType() == Material.GLASS_BOTTLE) {
+            inHand.setAmount(inHand.getAmount() - 1);
+            XVersion.setItemInHand(player, inHand.getAmount() <= 0 ? null : inHand);
             return;
         }
 
-        ItemStack off = player.getInventory().getItemInOffHand();
-        if (off.getType() == Material.GLASS_BOTTLE) {
-            off.setAmount(off.getAmount() - 1);
-            return;
-        }
+        try {
+            ItemStack off = player.getInventory().getItemInOffHand();
+            if (off != null && off.getType() == Material.GLASS_BOTTLE) {
+                off.setAmount(off.getAmount() - 1);
+                player.getInventory().setItemInOffHand(off.getAmount() <= 0 ? null : off);
+                return;
+            }
+        } catch (Throwable ignored) {}
 
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
             if (item != null && item.getType() == Material.GLASS_BOTTLE) {
                 item.setAmount(item.getAmount() - 1);
+                if (item.getAmount() <= 0) {
+                    player.getInventory().setItem(i, null);
+                }
                 return;
             }
         }
     }
 
     /**
-     * Plays sound and particle effects when filling a bottle.
+     * Plays sound effects when filling a bottle.
      */
     public void playFillEffects(Player player) {
         if (config.isSoundsEnabled()) {
-            try {
-                Sound sound = Sound.valueOf(config.getSoundFill());
-                player.playSound(player.getLocation(), sound, 1.0f, 1.2f);
-            } catch (IllegalArgumentException ignored) {}
+            XVersion.playSound(player, config.getSoundFill(), "ENTITY_EXPERIENCE_ORB_PICKUP", "ORB_PICKUP");
         }
     }
 
@@ -208,10 +206,7 @@ public class BottleManager {
      */
     public void playConsumeEffects(Player player) {
         if (config.isSoundsEnabled()) {
-            try {
-                Sound sound = Sound.valueOf(config.getSoundConsume());
-                player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-            } catch (IllegalArgumentException ignored) {}
+            XVersion.playSound(player, config.getSoundConsume(), "ENTITY_PLAYER_LEVELUP", "LEVEL_UP");
         }
     }
 }

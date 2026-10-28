@@ -1,9 +1,14 @@
 name: ExpToBottles
 version: '1.0.0'
 main: de.niktr.purpur.exptobottles.ExpToBottlesPlugin
-api-version: '1.21'
 author: niktr
-description: Purpur Plugin to store XP in bottles
+description: Store and redeem XP in bottles across Minecraft 1.8 through 1.21.4+
+commands:
+  bottle:
+    description: Fülle deine Erfahrung in Flaschen ab
+    aliases: [bottlexp, xpbottle, expbottle]
+    permission: exptobottles.use
+    usage: /<command> [menge|levels L|all|pickup|reload]
 permissions:
   exptobottles.use:
     description: Erlaubt das Abfüllen und Einlösen von XP in Flaschen

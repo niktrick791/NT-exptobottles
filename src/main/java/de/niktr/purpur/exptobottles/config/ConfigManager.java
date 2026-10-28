@@ -1,16 +1,15 @@
 package de.niktr.purpur.exptobottles.config;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import de.niktr.purpur.exptobottles.experience.XVersion;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConfigManager {
 
     private final JavaPlugin plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     // Bottling settings
     private boolean requireEmptyBottle;
@@ -62,87 +61,99 @@ public class ConfigManager {
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        load();
+        loadConfig();
     }
 
-    public void load() {
+    public void loadConfig() {
         plugin.saveDefaultConfig();
         plugin.reloadConfig();
         FileConfiguration config = plugin.getConfig();
 
-        // Bottling
         this.requireEmptyBottle = config.getBoolean("bottling.require-empty-bottle", true);
         this.returnEmptyBottleOnConsume = config.getBoolean("bottling.return-empty-bottle-on-consume", true);
         this.minXp = config.getInt("bottling.min-xp", 1);
-        this.maxXpPerBottle = config.getInt("bottling.max-xp-per-bottle", -1);
+        this.maxXpPerBottle = config.getInt("bottling.max-xp-per-bottle", 0);
         this.taxPercent = config.getDouble("bottling.tax-percent", 0.0);
         this.sneakRightClickToFill = config.getBoolean("bottling.sneak-right-click-to-fill", true);
-        this.sneakFillMode = config.getString("bottling.sneak-fill-mode", "LEVEL");
+        this.sneakFillMode = config.getString("bottling.sneak-fill-mode", "ALL");
         this.directConsumeOnRightClick = config.getBoolean("bottling.direct-consume-on-right-click", true);
         this.allowThrow = config.getBoolean("bottling.allow-throw", true);
 
-        // Fast Pickup
-        this.fastPickupEnabled = config.getBoolean("fast-pickup.enabled", true);
-        this.vacuumRadius = config.getDouble("fast-pickup.vacuum-radius", 5.0);
-        this.instantPickupRadius = config.getDouble("fast-pickup.instant-pickup-radius", 2.5);
-        this.intervalTicks = config.getInt("fast-pickup.interval-ticks", 2);
-        this.maxOrbsPerBatch = config.getInt("fast-pickup.max-orbs-per-batch", 50);
-        this.pullEffect = config.getBoolean("fast-pickup.pull-effect", true);
-        this.repairMending = config.getBoolean("fast-pickup.repair-mending", true);
-        this.playSoundOnPickup = config.getBoolean("fast-pickup.play-sound", true);
-        this.particlesOnPickup = config.getBoolean("fast-pickup.particles", true);
+        this.fastPickupEnabled = config.getBoolean("vacuum.enabled", true);
+        this.vacuumRadius = config.getDouble("vacuum.radius", 7.0);
+        this.instantPickupRadius = config.getDouble("vacuum.instant-pickup-radius", 1.8);
+        this.intervalTicks = config.getInt("vacuum.interval-ticks", 2);
+        this.maxOrbsPerBatch = config.getInt("vacuum.max-orbs-per-batch", 32);
+        this.pullEffect = config.getBoolean("vacuum.pull-effect", true);
+        this.repairMending = config.getBoolean("vacuum.repair-mending", true);
+        this.playSoundOnPickup = config.getBoolean("vacuum.play-sound-on-pickup", false);
+        this.particlesOnPickup = config.getBoolean("vacuum.particles-on-pickup", true);
 
-        // Effects
-        this.soundsEnabled = config.getBoolean("effects.enabled", true);
-        this.soundFill = config.getString("effects.sound-fill", "ITEM_BOTTLE_FILL");
+        this.soundsEnabled = config.getBoolean("effects.sounds", true);
+        this.soundFill = config.getString("effects.sound-fill", "ENTITY_EXPERIENCE_ORB_PICKUP");
         this.soundConsume = config.getString("effects.sound-consume", "ENTITY_PLAYER_LEVELUP");
         this.particlesEnabled = config.getBoolean("effects.particles", true);
 
-        // Item
-        this.itemName = config.getString("item.name", "<gradient:#00FFAA:#00AAFF><bold>Erfahrungsflasche</bold></gradient>");
-        this.itemLore = config.getStringList("item.lore");
-        if (this.itemLore.isEmpty()) {
-            this.itemLore = List.of(
-                    "<gray>Gespeicherte XP: <green><bold>{xp}</bold></green> <dark_gray>(ca. {levels} Lvl)</dark_gray>",
-                    "<gray>Abgefüllt von: <yellow>{player}</yellow>",
-                    "<dark_gray>---------------------------</dark_gray>",
-                    "<yellow>Rechtsklick:</yellow> <white>XP direkt trinken</white>",
-                    "<yellow>Werfen:</yellow> <white>XP Flasche werfen</white>"
-            );
+        this.itemName = convertTags(config.getString("item.name", "&aErfahrungsflasche &7(&e{xp} XP&7)"));
+        List<String> rawLore = config.getStringList("item.lore");
+        this.itemLore = new ArrayList<>();
+        if (rawLore.isEmpty()) {
+            this.itemLore.add("&7Gespeicherte Erfahrung: &e{xp} XP");
+            this.itemLore.add("&7Ungefähre Level: &b~{levels} Level");
+            this.itemLore.add("&7Abgefüllt von: &f{player}");
+            this.itemLore.add("&8[XP:{xp}]");
+        } else {
+            for (String l : rawLore) {
+                this.itemLore.add(convertTags(l));
+            }
+            this.itemLore.add("&8[XP:{xp}]");
         }
 
-        // Messages
-        this.prefix = config.getString("messages.prefix", "<dark_gray>[<gradient:#00FFAA:#00AAFF>ExpBottles</gradient>]</dark_gray> ");
-        this.notEnoughXp = config.getString("messages.not-enough-xp", "<red>Du hast nicht genug Erfahrung! Du besitzt nur <yellow>{xp}</yellow> XP.</red>");
-        this.noBottle = config.getString("messages.no-bottle", "<red>Du benötigst eine leere Glasflasche in der Hand oder im Inventar!</red>");
-        this.bottledSuccess = config.getString("messages.bottled-success", "<green>Erfolgreich <gold>{xp} XP</gold> in eine Flasche abgefüllt!</green>");
-        this.bottledSuccessTax = config.getString("messages.bottled-success-tax", "<green>Erfolgreich <gold>{xp} XP</gold> abgefüllt! <gray>(Steuer: {tax} XP)</gray></green>");
-        this.consumedSuccess = config.getString("messages.consumed-success", "<green>Du hast <gold>{xp} XP</gold> erhalten!</green>");
-        this.minXpError = config.getString("messages.min-xp-error", "<red>Die Mindestmenge zum Abfüllen beträgt <yellow>{min}</yellow> XP.</red>");
-        this.maxXpError = config.getString("messages.max-xp-error", "<red>Die Höchstmenge pro Flasche beträgt <yellow>{max}</yellow> XP.</red>");
-        this.noPermission = config.getString("messages.no-permission", "<red>Dazu hast du keine Berechtigung!</red>");
-        this.reloaded = config.getString("messages.reloaded", "<green>Konfiguration wurde erfolgreich neu geladen!</green>");
-        this.usage = config.getString("messages.usage", "<yellow>Verwendung: <white>/bottle [amount | all | Xl | until Y | vacuum | spawn X]</white></yellow>");
-        this.xpSpawned = config.getString("messages.xp-spawned", "<green>Es wurden <gold>{xp} XP</gold> am Standort gespawnt!</green>");
-        this.vacuumEnabled = config.getString("messages.vacuum-enabled", "<green>XP-Schnelleinsammler wurde <yellow>aktiviert</yellow>!</green>");
-        this.vacuumDisabled = config.getString("messages.vacuum-disabled", "<red>XP-Schnelleinsammler wurde <yellow>deaktiviert</yellow>!</red>");
+        this.prefix = convertTags(config.getString("messages.prefix", "&8[&aXP-Bottles&8] &r"));
+        this.notEnoughXp = convertTags(config.getString("messages.not-enough-xp", "&cDu hast nicht genug Erfahrung! (Du hast nur &e{xp} XP&c)"));
+        this.noBottle = convertTags(config.getString("messages.no-bottle", "&cDu benötigst eine leere Glasflasche in der Hand!"));
+        this.bottledSuccess = convertTags(config.getString("messages.bottled-success", "&aDu hast erfolgreich &e{xp} XP &ain eine Flasche gefüllt!"));
+        this.bottledSuccessTax = convertTags(config.getString("messages.bottled-success-tax", "&aErfolgreich &e{xp} XP &aabgefüllt (&c{tax} XP &7Steuer abgezogen)."));
+        this.consumedSuccess = convertTags(config.getString("messages.consumed-success", "&aDu hast &e{xp} XP &aerhalten!"));
+        this.minXpError = convertTags(config.getString("messages.min-xp-error", "&cDie Mindestmenge zum Abfüllen beträgt &e{min} XP&c."));
+        this.maxXpError = convertTags(config.getString("messages.max-xp-error", "&cDie Höchstmenge pro Flasche beträgt &e{max} XP&c."));
+        this.noPermission = convertTags(config.getString("messages.no-permission", "&cDazu hast du keine Berechtigung!"));
+        this.reloaded = convertTags(config.getString("messages.reloaded", "&aKonfiguration wurde erfolgreich neu geladen!"));
+        this.usage = convertTags(config.getString("messages.usage", "&eVerwendung: &f/bottle [amount | all | Xl | until Y | vacuum | spawn X]"));
+        this.xpSpawned = convertTags(config.getString("messages.xp-spawned", "&aEs wurden &e{xp} XP &aam Standort gespawnt!"));
+        this.vacuumEnabled = convertTags(config.getString("messages.vacuum-enabled", "&aXP-Schnelleinsammler wurde &eaktiviert&a!"));
+        this.vacuumDisabled = convertTags(config.getString("messages.vacuum-disabled", "&cXP-Schnelleinsammler wurde &edeaktiviert&c!"));
     }
 
-    public Component parse(String message, Object... replacements) {
+    private String convertTags(String text) {
+        if (text == null) return "";
+        return text.replace("<green>", "&a").replace("</green>", "")
+                .replace("<red>", "&c").replace("</red>", "")
+                .replace("<gold>", "&6").replace("</gold>", "")
+                .replace("<yellow>", "&e").replace("</yellow>", "")
+                .replace("<white>", "&f").replace("</white>", "")
+                .replace("<gray>", "&7").replace("</gray>", "")
+                .replace("<dark_gray>", "&8").replace("</dark_gray>", "")
+                .replace("<blue>", "&9").replace("</blue>", "")
+                .replace("<aqua>", "&b").replace("</aqua>", "")
+                .replace("<b>", "&l").replace("</b>", "")
+                .replace("<i>", "&o").replace("</i>", "");
+    }
+
+    public String parse(String message, Object... replacements) {
         String formatted = message;
         for (int i = 0; i < replacements.length; i += 2) {
             if (i + 1 < replacements.length) {
                 formatted = formatted.replace("{" + replacements[i] + "}", String.valueOf(replacements[i + 1]));
             }
         }
-        return miniMessage.deserialize(formatted);
+        return XVersion.colorize(formatted);
     }
 
-    public Component getPrefixedMessage(String rawMessage, Object... replacements) {
-        return miniMessage.deserialize(prefix).append(parse(rawMessage, replacements));
+    public String getPrefixedMessage(String rawMessage, Object... replacements) {
+        return XVersion.colorize(prefix) + parse(rawMessage, replacements);
     }
 
-    // Getters
     public boolean isRequireEmptyBottle() { return requireEmptyBottle; }
     public boolean isReturnEmptyBottleOnConsume() { return returnEmptyBottleOnConsume; }
     public int getMinXp() { return minXp; }

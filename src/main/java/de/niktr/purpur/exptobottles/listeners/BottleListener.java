@@ -1,9 +1,9 @@
 package de.niktr.purpur.exptobottles.listeners;
 
-import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import de.niktr.purpur.exptobottles.bottle.BottleManager;
 import de.niktr.purpur.exptobottles.config.ConfigManager;
 import de.niktr.purpur.exptobottles.experience.ExperienceManager;
+import de.niktr.purpur.exptobottles.experience.XVersion;
 import de.niktr.purpur.exptobottles.vacuum.XpVacuumManager;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,19 +15,21 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.ExpBottleEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashMap;
 
 public class BottleListener implements Listener {
 
+    private final JavaPlugin plugin;
     private final BottleManager bottleManager;
     private final ConfigManager config;
     private final XpVacuumManager vacuumManager;
 
-    public BottleListener(BottleManager bottleManager, ConfigManager config, XpVacuumManager vacuumManager) {
+    public BottleListener(JavaPlugin plugin, BottleManager bottleManager, ConfigManager config, XpVacuumManager vacuumManager) {
+        this.plugin = plugin;
         this.bottleManager = bottleManager;
         this.config = config;
         this.vacuumManager = vacuumManager;
@@ -35,8 +37,7 @@ public class BottleListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // Only process MAIN_HAND interactions to prevent double triggering
-        if (event.getHand() != EquipmentSlot.HAND) {
+        if (!XVersion.isMainHand(event)) {
             return;
         }
 
@@ -46,7 +47,8 @@ public class BottleListener implements Listener {
         }
 
         Player player = event.getPlayer();
-        ItemStack item = player.getInventory().getItemInMainHand();
+        ItemStack item = XVersion.getItemInHand(player);
+        if (item == null) return;
 
         // Feature 1: Sneak + Right-Click with Glass Bottle to fill XP
         if (item.getType() == Material.GLASS_BOTTLE && player.isSneaking() && config.isSneakRightClickToFill()) {
@@ -93,7 +95,13 @@ public class BottleListener implements Listener {
                 if (storedXp <= 0) return;
 
                 // Consume 1 bottle
-                item.setAmount(item.getAmount() - 1);
+                int amount = item.getAmount() - 1;
+                if (amount <= 0) {
+                    XVersion.setItemInHand(player, null);
+                } else {
+                    item.setAmount(amount);
+                    XVersion.setItemInHand(player, item);
+                }
 
                 // Add XP to player
                 ExperienceManager.addPlayerExp(player, storedXp);
@@ -118,11 +126,15 @@ public class BottleListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
-        if (event.getEntity() instanceof ThrownExpBottle thrownBottle) {
-            ItemStack item = thrownBottle.getItem();
-            if (bottleManager.isExpBottle(item)) {
-                int storedXp = bottleManager.getStoredExp(item);
-                thrownBottle.getPersistentDataContainer().set(bottleManager.getXpKey(), PersistentDataType.INTEGER, storedXp);
+        if (event.getEntity() instanceof ThrownExpBottle) {
+            ThrownExpBottle thrownBottle = (ThrownExpBottle) event.getEntity();
+            if (thrownBottle.getShooter() instanceof Player) {
+                Player player = (Player) thrownBottle.getShooter();
+                ItemStack item = XVersion.getItemInHand(player);
+                if (bottleManager.isExpBottle(item)) {
+                    int storedXp = bottleManager.getStoredExp(item);
+                    thrownBottle.setMetadata("stored_xp", new FixedMetadataValue(plugin, storedXp));
+                }
             }
         }
     }
@@ -130,20 +142,14 @@ public class BottleListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onExpBottleBreak(ExpBottleEvent event) {
         ThrownExpBottle bottle = event.getEntity();
-        if (bottle.getPersistentDataContainer().has(bottleManager.getXpKey(), PersistentDataType.INTEGER)) {
-            Integer stored = bottle.getPersistentDataContainer().get(bottleManager.getXpKey(), PersistentDataType.INTEGER);
-            if (stored != null && stored > 0) {
-                event.setExperience(stored);
-                event.setShowEffect(true);
-            }
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlayerPickupExp(PlayerPickupExperienceEvent event) {
-        if (vacuumManager != null && vacuumManager.isVacuumEnabled(event.getPlayer())) {
-            // Instantly vacuum all adjacent orbs when player touches any orb
-            vacuumManager.processPlayerVacuum(event.getPlayer());
+        if (bottle.hasMetadata("stored_xp")) {
+            try {
+                int stored = bottle.getMetadata("stored_xp").get(0).asInt();
+                if (stored > 0) {
+                    event.setExperience(stored);
+                    event.setShowEffect(true);
+                }
+            } catch (Throwable ignored) {}
         }
     }
 }

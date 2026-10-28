@@ -5,11 +5,8 @@ import de.niktr.purpur.exptobottles.commands.BottleCommand;
 import de.niktr.purpur.exptobottles.config.ConfigManager;
 import de.niktr.purpur.exptobottles.listeners.BottleListener;
 import de.niktr.purpur.exptobottles.vacuum.XpVacuumManager;
-import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.List;
 
 public final class ExpToBottlesPlugin extends JavaPlugin {
 
@@ -27,22 +24,23 @@ public final class ExpToBottlesPlugin extends JavaPlugin {
         // Start vacuum task for fast XP pickup at farms
         this.vacuumManager.start();
 
-        // Register event listener
-        getServer().getPluginManager().registerEvents(new BottleListener(bottleManager, configManager, vacuumManager), this);
+        // Register event listener (compatible across 1.8 through 1.21.4+)
+        getServer().getPluginManager().registerEvents(new BottleListener(this, bottleManager, configManager, vacuumManager), this);
 
-        // Register commands with Paper's modern LifecycleEventManager (Paper 1.20.6+ / 1.21+ / Purpur)
+        // Register command via standard Bukkit API
         BottleCommand bottleCmd = new BottleCommand(bottleManager, configManager, vacuumManager);
-        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            final Commands commands = event.registrar();
-            commands.register(
-                "bottle",
-                "Fülle deine Erfahrung in Flaschen ab",
-                List.of("bottlexp", "xpbottle", "expbottle"),
-                bottleCmd
-            );
-        });
+        PluginCommand cmd = getCommand("bottle");
+        if (cmd != null) {
+            cmd.setExecutor(bottleCmd);
+            cmd.setTabCompleter(bottleCmd);
+        } else {
+            getLogger().warning("Befehl 'bottle' konnte nicht registriert werden. Bitte plugin.yml prüfen.");
+        }
 
-        getLogger().info("ExpToBottles für Purpur MC 1.26.2 wurde erfolgreich aktiviert!");
+        getLogger().info("=========================================");
+        getLogger().info(" ExpToBottles v" + getDescription().getVersion() + " wurde erfolgreich aktiviert!");
+        getLogger().info(" Multi-Version Support: Minecraft 1.8 - 1.21.4+");
+        getLogger().info("=========================================");
     }
 
     @Override

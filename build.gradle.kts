@@ -1,44 +1,35 @@
 plugins {
-    `java`
+    `java-library`
 }
 
-group = "de.niktr.purpur"
+group = "de.niktr"
 version = "1.0.0"
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25))
-    }
-}
 
 repositories {
     mavenCentral()
-    maven {
-        name = "purpurmc"
-        url = uri("https://repo.purpurmc.org/snapshots")
-    }
-    maven {
-        name = "papermc"
-        url = uri("https://repo.papermc.io/repository/maven-public/")
-    }
+    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+    maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.purpurmc.org/snapshots")
+    maven("https://oss.sonatype.org/content/groups/public/")
 }
 
 dependencies {
-    compileOnly("org.purpurmc.purpur:purpur-api:26.2.build.2632-stable")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.0")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    compileOnly("org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT")
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    options.release.set(25)
-}
-
-tasks.test {
-    useJUnitPlatform()
+    options.release.set(8)
 }
 
 tasks.jar {
     archiveBaseName.set("ExpToBottles")
+    archiveClassifier.set("")
     archiveVersion.set("1.0.0")
 }
